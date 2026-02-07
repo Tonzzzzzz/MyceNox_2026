@@ -18,5 +18,5 @@ MonoBehaviour:
   speed: 2
   visual: {fileID: 21300000, guid: f47945c62ef51224c93e5172ef9e2d87, type: 3}
   hurtVisual: {fileID: 21300000, guid: cc799f78200fd374c880b7bc4e99ce49, type: 3}
-  deadVisual: {fileID: 21300000, guid: 4e5795895d323f84ab90275b58b81e08, type: 3}
+  deadVisual: {fileID: 21300000, guid: 65a4d87e00b260246b42c7fe8c75fae6, type: 3}
   hurtThreshold: 0.633
