@@ -61,4 +61,16 @@ public class UnitVisuals : MonoBehaviour
         transform.position = originalPosition; // Reset
         sr.color = originalColor;
     }
+
+    // Call this to permanently change the sprite (until healed)
+    public void ChangeSprite(Sprite newSprite)
+    {
+        if (newSprite == null) return; // Safety check
+
+        SpriteRenderer sr = GetComponentInChildren<SpriteRenderer>();
+        if (sr != null)
+        {
+            sr.sprite = newSprite;
+        }
+    }
 }

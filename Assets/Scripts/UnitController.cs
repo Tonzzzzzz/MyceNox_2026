@@ -56,28 +56,42 @@ public class UnitController : MonoBehaviour
     /// <summary>
     /// The public method to apply damage.
     /// </summary>
-    public void TakeDamage(int amount)
+    // CHANGE 'void' to 'bool' so CombatManager knows if they died!
+    public bool TakeDamage(int amount)
     {
-        if (IsDead) return; // Can't kill what's already dead
+        if (IsDead) return true; // Already dead
 
-        // Apply Damage
+        // 1. Apply Damage
         CurrentHealth -= amount;
         
         Debug.Log($"<color=red>{Stats.unitName}</color> took {amount} damage. Remaining: {CurrentHealth}");
 
-        // 1. Trigger "Hurt" effects
+        // 2. Trigger Events
         OnDamaged?.Invoke();
 
-        // 2. Update Health Bar
+        // 3. Update Health Bar & Calculate Percent
         float healthPercent = (float)CurrentHealth / Stats.maxHealth;
         OnHealthChanged?.Invoke(healthPercent);
 
-        // 3. Check for Death
+        // --- NEW: VISUAL UPDATE ---
+        // If we are alive AND below the threshold (50%) AND we have a specific sprite for it...
+        if (CurrentHealth > 0 && 
+            healthPercent <= Stats.hurtThreshold && 
+            Stats.hurtVisual != null)
+        {
+            Visuals.ChangeSprite(Stats.hurtVisual);
+        }
+        // --------------------------
+
+        // 4. Check for Death
         if (CurrentHealth <= 0)
         {
             CurrentHealth = 0;
             Die();
+            return true; // Return TRUE (Yes, they died)
         }
+
+        return false; // Return FALSE (No, they survived)
     }
 
     public void Heal(int amount)
