@@ -6,7 +6,8 @@ public class UnitController : MonoBehaviour
 {
     [Header("Visuals")]
     [SerializeField] private SpriteRenderer visualRenderer;
-    
+    public UnitVisuals Visuals;
+
     // PROPERTIES
     // We use Properties to protect data. Other scripts can READ Stats, but only this script can SET them.
     public UnitStatsSO Stats { get; private set; }
@@ -22,9 +23,13 @@ public class UnitController : MonoBehaviour
 
     private void Awake()
     {
+        // Auto-find the visuals script on the same object
+        Visuals = GetComponent<UnitVisuals>();
+
         // Fail-safe: Find the renderer if we forgot to drag it in
         if (visualRenderer == null) 
             visualRenderer = GetComponent<SpriteRenderer>();
+        
     }
 
     /// <summary>

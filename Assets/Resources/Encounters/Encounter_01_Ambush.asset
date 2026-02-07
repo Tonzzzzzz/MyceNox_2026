@@ -14,4 +14,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EncounterSO
   enemies:
   - {fileID: 11400000, guid: 7b39a9ccd6bc3864d867821e72d9d27c, type: 2}
-  environmentPrefab: {fileID: 702125523920612567, guid: ca732b6ab52bacf42959110bed0555ac, type: 3}
+  environmentPrefab: {fileID: 8870276804150459679, guid: 803c971d0dff21345a824dc303261ab9, type: 3}

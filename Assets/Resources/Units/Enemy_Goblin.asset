@@ -16,4 +16,4 @@ MonoBehaviour:
   maxHealth: 8
   baseDamage: 2
   speed: 2
-  visual: {fileID: 21300000, guid: d5ac84d20ff811645a6fb3a86d623462, type: 3}
+  visual: {fileID: 21300000, guid: f47945c62ef51224c93e5172ef9e2d87, type: 3}

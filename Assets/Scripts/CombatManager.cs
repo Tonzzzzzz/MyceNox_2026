@@ -1,7 +1,7 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq; // Needed for sorting lists easily
+using System.Linq; 
 
 public enum CombatState { Setup, PlayerTurn, EnemyTurn, Victory, Defeat }
 
@@ -10,36 +10,27 @@ public class CombatManager : MonoBehaviour
     public static CombatManager Instance { get; private set; }
 
     [Header("Runtime Data")]
-    public CombatState State;
+    public CombatState State; // Capital 'S'
     private UnitController playerUnit;
     private List<UnitController> enemyUnits = new List<UnitController>();
 
     private void Awake()
     {
-        // Singleton Pattern
         if (Instance != null && Instance != this) Destroy(gameObject);
         else Instance = this;
     }
 
-    // Called by LevelManager after it spawns everything
     public void StartCombat()
     {
-        // 1. Find the actors in the scene
         UnitController[] allUnits = FindObjectsByType<UnitController>(FindObjectsSortMode.None);
         
-        // 2. Separate Player from Enemies
-        // (We assume the player is the one with "Hero" in the name, or you can use Tags)
         enemyUnits.Clear();
         foreach(var unit in allUnits)
         {
-            if (unit.name.Contains("Player")) // Or unit.CompareTag("Player")
-            {
+            if (unit.name.Contains("Player")) 
                 playerUnit = unit;
-            }
-            else
-            {
+            else 
                 enemyUnits.Add(unit);
-            }
         }
 
         State = CombatState.Setup;
@@ -48,51 +39,64 @@ public class CombatManager : MonoBehaviour
 
     private IEnumerator BeginBattleRoutine()
     {
-        yield return new WaitForSeconds(0.5f); // Short delay for smooth transition
-
-        // Default to Player Turn for now
+        yield return new WaitForSeconds(0.5f);
         State = CombatState.PlayerTurn;
         Debug.Log("Combat Started! Player's Turn.");
     }
 
     // --- PLAYER INPUT ---
-    
-    // Connect this to your UI Button "Attack"
+
     public void OnPlayerAttackButton()
     {
+        // 1. Safety Check: Is it actually the player's turn?
         if (State != CombatState.PlayerTurn) return;
 
-        StartCoroutine(PlayerAttackRoutine());
-    }
-
-    private IEnumerator PlayerAttackRoutine()
-    {
-        // 1. Find a target (First living enemy)
-        // Note: We use .Stats (Capital S) here!
+        // 2. Target Selection: Find the first enemy who isn't dead
         UnitController target = enemyUnits.FirstOrDefault(e => !e.IsDead);
-        
-        if (target != null)
+
+        if (target == null)
         {
-            // Calculate Damage using the properties (Stats with Capital S)
-            int damage = playerUnit.Stats.baseDamage;
-            
-            Debug.Log($"Player attacks {target.Stats.unitName} for {damage}!");
-            
-            // Animation delay
-            yield return new WaitForSeconds(0.5f); 
-            
-            target.TakeDamage(damage);
+            Debug.Log("No enemies left to attack!");
+            return;
         }
 
-        yield return new WaitForSeconds(1f); // End of turn pause
+        // 3. Start the "Movie Sequence"
+        StartCoroutine(AttackSequence(target));
+    }
 
+    // The "Movie Sequence" handles Visuals AND Logic in order
+    private IEnumerator AttackSequence(UnitController target)
+    {
+        // A. Lock Input
+        State = CombatState.EnemyTurn; 
+
+        // B. VISUAL: Player Runs to Enemy (Waits here until done)
+        yield return StartCoroutine(playerUnit.Visuals.PlayAttackAnimation(target.transform.position));
+
+        // --- IMPACT MOMENT ---
+
+        // C. LOGIC: Apply Damage
+        int damage = playerUnit.Stats.baseDamage; 
+    
+        target.TakeDamage(damage); // 1. Apply the damage
+        bool isDead = target.IsDead; // 2. Check the status afterwards
+        
+        Debug.Log($"Player hit {target.name} for {damage} damage.");
+
+        // D. VISUAL: Enemy Reacts (Waits here until done)
+        yield return StartCoroutine(target.Visuals.PlayHitAnimation());
+
+        // E. Check Win/Loss/Next Turn
         if (CheckWinCondition())
         {
             EndBattle(true);
         }
         else
         {
-            State = CombatState.EnemyTurn;
+            // Wait a tiny bit before enemy starts acts
+            yield return new WaitForSeconds(0.5f);
+            
+            // Pass the baton to the Enemy
             StartCoroutine(EnemyTurnRoutine());
         }
     }
@@ -107,19 +111,26 @@ public class CombatManager : MonoBehaviour
         {
             if (enemy.IsDead) continue;
 
-            yield return new WaitForSeconds(1f); // AI Thinking time
+            // 1. AI Thinking time
+            yield return new WaitForSeconds(1f); 
             
-            // AI Logic: Attack Player
-            // Note: Using .Stats (Capital S)
+            // 2. VISUAL: Enemy runs to Player
+            yield return StartCoroutine(enemy.Visuals.PlayAttackAnimation(playerUnit.transform.position));
+
+            // --- IMPACT MOMENT ---
+
+            // 3. LOGIC: Deal Damage
             int damage = enemy.Stats.baseDamage;
-            Debug.Log($"{enemy.Stats.unitName} attacks Player!");
-            
             playerUnit.TakeDamage(damage);
+            Debug.Log($"{enemy.name} hit Player for {damage}!");
+
+            // 4. VISUAL: Player Reacts
+            yield return StartCoroutine(playerUnit.Visuals.PlayHitAnimation());
             
             if (playerUnit.IsDead)
             {
                 EndBattle(false);
-                yield break;
+                yield break; // Stop the loop immediately
             }
         }
 
@@ -131,7 +142,6 @@ public class CombatManager : MonoBehaviour
 
     private bool CheckWinCondition()
     {
-        // Returns true if all enemies are dead
         return enemyUnits.All(e => e.IsDead);
     }
 
