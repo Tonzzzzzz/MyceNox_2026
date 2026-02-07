@@ -64,42 +64,52 @@ public class CombatManager : MonoBehaviour
         StartCoroutine(AttackSequence(target));
     }
 
-    // The "Movie Sequence" handles Visuals AND Logic in order
     private IEnumerator AttackSequence(UnitController target)
-    {
-        // A. Lock Input
-        State = CombatState.EnemyTurn; 
+{
+    // A. Lock Input
+    State = CombatState.EnemyTurn; 
 
-        // B. VISUAL: Player Runs to Enemy (Waits here until done)
-        yield return StartCoroutine(playerUnit.Visuals.PlayAttackAnimation(target.transform.position));
+    // B. VISUAL: Player Runs to Enemy
+    yield return StartCoroutine(playerUnit.Visuals.PlayAttackAnimation(target.transform.position));
 
-        // --- IMPACT MOMENT ---
+    // --- IMPACT MOMENT ---
 
-        // C. LOGIC: Apply Damage
-        int damage = playerUnit.Stats.baseDamage; 
+    // C. LOGIC: Apply Damage
+    int damage = playerUnit.Stats.baseDamage; 
     
-        target.TakeDamage(damage); // 1. Apply the damage
-        bool isDead = target.IsDead; // 2. Check the status afterwards
+    // We capture the result (True/False) here
+    bool isDead = target.TakeDamage(damage); 
+    
+    Debug.Log($"Player hit {target.name} for {damage} damage.");
+
+    // D. VISUAL: CHOOSE ANIMATION <--- THIS IS THE CHANGE
+    if (isDead)
+    {
+        // 1. Play the Death Animation (Swap Sprite -> Wait -> Fade)
+        // We pass the specific "Dead Body" sprite from the stats
+        yield return StartCoroutine(target.Visuals.PlayDeathAnimation(target.Stats.deadVisual));
         
-        Debug.Log($"Player hit {target.name} for {damage} damage.");
-
-        // D. VISUAL: Enemy Reacts (Waits here until done)
-        yield return StartCoroutine(target.Visuals.PlayHitAnimation());
-
-        // E. Check Win/Loss/Next Turn
-        if (CheckWinCondition())
-        {
-            EndBattle(true);
-        }
-        else
-        {
-            // Wait a tiny bit before enemy starts acts
-            yield return new WaitForSeconds(0.5f);
-            
-            // Pass the baton to the Enemy
-            StartCoroutine(EnemyTurnRoutine());
-        }
+        // 2. Hide the object completely so it can't be clicked again
+        target.gameObject.SetActive(false);
     }
+    else
+    {
+        // 1. They survived, so just play the "Ouch" shake
+        yield return StartCoroutine(target.Visuals.PlayHitAnimation());
+    }
+
+    // E. Check Win/Loss/Next Turn
+    if (CheckWinCondition())
+    {
+        EndBattle(true);
+    }
+    else
+    {
+        // Only run the Enemy Turn if the battle isn't over!
+        yield return new WaitForSeconds(0.5f);
+        StartCoroutine(EnemyTurnRoutine());
+    }
+}
 
     // --- ENEMY AI ---
 

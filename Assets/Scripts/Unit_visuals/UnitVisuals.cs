@@ -73,4 +73,43 @@ public class UnitVisuals : MonoBehaviour
             sr.sprite = newSprite;
         }
     }
+
+ public IEnumerator PlayDeathAnimation(Sprite deadSprite)
+{
+    // 1. Swap to the Dead Art (if we have one)
+    if (deadSprite != null)
+    {
+        ChangeSprite(deadSprite);
+    }
+
+    // 2. Wait a moment so the player can glory in their victory
+    // (Optional: You can remove this line if you want instant fading)
+    yield return new WaitForSeconds(0.5f);
+
+    // 3. The Fade Out & Sink Logic
+    SpriteRenderer sr = GetComponentInChildren<SpriteRenderer>();
+    Color startColor = sr.color;
+    Vector3 startPos = transform.position;
+
+    float duration = 1.5f; // Slow, dramatic fade
+    float elapsed = 0f;
+
+    while (elapsed < duration)
+    {
+        float t = elapsed / duration;
+
+        // Fade Alpha
+        sr.color = new Color(startColor.r, startColor.g, startColor.b, 1f - t);
+        
+        // Sink slightly
+        transform.position = startPos - new Vector3(0, t * 0.5f, 0);
+
+        elapsed += Time.deltaTime;
+        yield return null;
+    }
+
+    // Ensure fully invisible
+    sr.color = new Color(startColor.r, startColor.g, startColor.b, 0f);
+}
+
 }

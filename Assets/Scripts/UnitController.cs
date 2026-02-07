@@ -110,15 +110,14 @@ public class UnitController : MonoBehaviour
         Debug.Log($"<color=green>{Stats.unitName}</color> healed {amount}.");
     }
 
-    private void Die()
-    {
-        Debug.Log($"<color=grey>{Stats.unitName}</color> has died.");
-        
-        // Notify the CombatManager (and anyone else listening)
-        OnDeath?.Invoke(this);
-
-        // Optional: Play death animation here before disabling
-        // For now, we just turn it off
-        gameObject.SetActive(false); 
-    }
+   private void Die()
+{
+    // We don't need to say "IsDead = true" because CurrentHealth is already 0.
+    // The calculation (CurrentHealth <= 0) makes it true automatically!
+    
+    Debug.Log($"{Stats.unitName} has died.");
+    
+    // NOTE: Do NOT add Destroy() or SetActive(false) here. 
+    // The CombatManager handles the visual cleanup.
+}
 }
