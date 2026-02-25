@@ -1,7 +1,7 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq; 
+using System.Linq;
 
 public enum CombatState { Setup, PlayerTurn, EnemyTurn, Victory, Defeat }
 
@@ -10,9 +10,12 @@ public class CombatManager : MonoBehaviour
     public static CombatManager Instance { get; private set; }
 
     [Header("Runtime Data")]
-    public CombatState State; // Capital 'S'
+    public CombatState State; 
     private UnitController playerUnit;
     private List<UnitController> enemyUnits = new List<UnitController>();
+
+    // NEW: Prevents the player from spam-clicking buttons while an animation is playing
+    private bool isActing = false;
 
     private void Awake()
     {
@@ -40,7 +43,14 @@ public class CombatManager : MonoBehaviour
     private IEnumerator BeginBattleRoutine()
     {
         yield return new WaitForSeconds(0.5f);
+        StartPlayerTurn();
+    }
+
+    private void StartPlayerTurn()
+    {
         State = CombatState.PlayerTurn;
+        // Reset the player's Stance back to "Defending" at the start of their turn
+        playerUnit.ResetTurn(); 
         Debug.Log("Combat Started! Player's Turn.");
     }
 
@@ -48,10 +58,9 @@ public class CombatManager : MonoBehaviour
 
     public void OnPlayerAttackButton()
     {
-        // 1. Safety Check: Is it actually the player's turn?
-        if (State != CombatState.PlayerTurn) return;
+        // Safety Check: Is it the player's turn? Are they already mid-attack?
+        if (State != CombatState.PlayerTurn || isActing) return;
 
-        // 2. Target Selection: Find the first enemy who isn't dead
         UnitController target = enemyUnits.FirstOrDefault(e => !e.IsDead);
 
         if (target == null)
@@ -60,56 +69,49 @@ public class CombatManager : MonoBehaviour
             return;
         }
 
-        // 3. Start the "Movie Sequence"
-        StartCoroutine(AttackSequence(target));
+        // Execute the action WITHOUT ending the turn
+        StartCoroutine(PlayerActionRoutine(target, false));
     }
 
-    private IEnumerator AttackSequence(UnitController target)
-{
-    // A. Lock Input
-    State = CombatState.EnemyTurn; 
-
-    // B. VISUAL: Player Runs to Enemy
-    yield return StartCoroutine(playerUnit.Visuals.PlayAttackAnimation(target.transform.position));
-
-    // --- IMPACT MOMENT ---
-
-    // C. LOGIC: Apply Damage
-    int damage = playerUnit.Stats.baseDamage; 
-    
-    // We capture the result (True/False) here
-    bool isDead = target.TakeDamage(damage); 
-    
-    Debug.Log($"Player hit {target.name} for {damage} damage.");
-
-    // D. VISUAL: CHOOSE ANIMATION <--- THIS IS THE CHANGE
-    if (isDead)
+    // You can hook this up to a UI button later!
+    public void OnPlayerPowerAttackButton() 
     {
-        // 1. Play the Death Animation (Swap Sprite -> Wait -> Fade)
-        // We pass the specific "Dead Body" sprite from the stats
-        yield return StartCoroutine(target.Visuals.PlayDeathAnimation(target.Stats.deadVisual));
+        if (State != CombatState.PlayerTurn || isActing) return;
+        UnitController target = enemyUnits.FirstOrDefault(e => !e.IsDead);
+        if (target != null) StartCoroutine(PlayerActionRoutine(target, true));
+    }
+
+    private IEnumerator PlayerActionRoutine(UnitController target, bool isPowerAttack)
+    {
+        isActing = true;
+
+        // DECOUPLED: We tell the UnitController to handle the entire attack sequence!
+        yield return StartCoroutine(playerUnit.PerformAttack(target, isPowerAttack));
+
+        // Clean up dead enemies from the tracking list
+        enemyUnits.RemoveAll(e => e.IsDead);
+
+        if (CheckWinCondition())
+        {
+            EndBattle(true);
+        }
         
-        // 2. Hide the object completely so it can't be clicked again
-        target.gameObject.SetActive(false);
-    }
-    else
-    {
-        // 1. They survived, so just play the "Ouch" shake
-        yield return StartCoroutine(target.Visuals.PlayHitAnimation());
+        isActing = false;
+        // Notice we do NOT start the Enemy Turn here. The player can keep attacking!
     }
 
-    // E. Check Win/Loss/Next Turn
-    if (CheckWinCondition())
+    // --- NEW: END TURN LOGIC ---
+
+    // Hook this up to a new "End Turn" button in your UI
+    public void OnEndTurnButton()
     {
-        EndBattle(true);
-    }
-    else
-    {
-        // Only run the Enemy Turn if the battle isn't over!
-        yield return new WaitForSeconds(0.5f);
+        // Don't let them end turn if an animation is still playing
+        if (State != CombatState.PlayerTurn || isActing) return;
+
+        Debug.Log("Player ended their turn.");
+        State = CombatState.EnemyTurn;
         StartCoroutine(EnemyTurnRoutine());
     }
-}
 
     // --- ENEMY AI ---
 
@@ -121,38 +123,30 @@ public class CombatManager : MonoBehaviour
         {
             if (enemy.IsDead) continue;
 
-            // 1. AI Thinking time
+            // Reset enemy Stance so they get their dodge chances back
+            enemy.ResetTurn();
+
             yield return new WaitForSeconds(1f); 
             
-            // 2. VISUAL: Enemy runs to Player
-            yield return StartCoroutine(enemy.Visuals.PlayAttackAnimation(playerUnit.transform.position));
+            // DECOUPLED: Enemy handles its own attack logic targeting the player
+            yield return StartCoroutine(enemy.PerformAttack(playerUnit, false));
 
-            // --- IMPACT MOMENT ---
-
-            // 3. LOGIC: Deal Damage
-            int damage = enemy.Stats.baseDamage;
-            playerUnit.TakeDamage(damage);
-            Debug.Log($"{enemy.name} hit Player for {damage}!");
-
-            // 4. VISUAL: Player Reacts
-            yield return StartCoroutine(playerUnit.Visuals.PlayHitAnimation());
-            
             if (playerUnit.IsDead)
             {
                 EndBattle(false);
-                yield break; // Stop the loop immediately
+                yield break; // Stop loop immediately
             }
         }
 
         Debug.Log("Enemy Turn Ended. Back to Player.");
-        State = CombatState.PlayerTurn;
+        StartPlayerTurn(); // Loop back to the player
     }
 
     // --- BATTLE END ---
 
     private bool CheckWinCondition()
     {
-        return enemyUnits.All(e => e.IsDead);
+        return enemyUnits.Count == 0 || enemyUnits.All(e => e.IsDead);
     }
 
     private void EndBattle(bool playerWon)
