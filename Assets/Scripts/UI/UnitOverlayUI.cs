@@ -71,7 +71,7 @@ public class UnitOverlayUI : MonoBehaviour
                 stanceText.text = "Overextended";
                 stanceText.color = new Color(1f, 0.5f, 0f); // Orange
                 break;
-            case UnitStance.Exposed:
+            case UnitStance.EXPOSED:
                 stanceText.text = "EXPOSED";
                 stanceText.color = Color.red;
                 break;

@@ -3,7 +3,13 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 
-public enum UnitStance { Defending, Acted, Overextended, Exposed, Downed }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// I have Used ChatGPT extensively to ask for advice and improve the syntax of the code herein.
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+public enum UnitStance { Defending, Acted, Overextended, EXPOSED, Downed }
 
 [RequireComponent(typeof(SpriteRenderer))]
 public class UnitController : MonoBehaviour
@@ -12,21 +18,27 @@ public class UnitController : MonoBehaviour
     [SerializeField] private SpriteRenderer visualRenderer;
     public UnitVisuals Visuals;
 
+    /// /////////////////////////////////////////
     // PROPERTIES
+    /// /////////////////////////////////////////
     public UnitStatsSO Stats { get; private set; }
     public int CurrentHealth { get; private set; }
     public bool IsDead => CurrentHealth <= 0;
 
-    // NEW: PUSH-YOUR-LUCK & TACTICAL PROPERTIES
+    /// /////////////////////////////////////////
+    // PUSH-YOUR-LUCK & TACTICAL PROPERTIES
+    /// /////////////////////////////////////////
     public UnitStance CurrentStance { get; private set; } = UnitStance.Defending;
     public int ActionsTakenThisTurn { get; private set; } = 0;
     public List<UnitController> EngagedUnits { get; private set; } = new List<UnitController>();
 
-    // EVENTS
+    /// /////////////////////////////////////////
+    //  EVENTS
+    /// /////////////////////////////////////////
     public event Action<float> OnHealthChanged; 
     public event Action<UnitController> OnDeath; 
     public event Action OnDamaged;
-    // NEW: Notify UI when Stance changes (for your text overlay)
+    // Notify UI when Stance changes (for the text overlay).
     public event Action<UnitStance> OnStanceChanged; 
     public event Action OnEngagementChanged;
 
@@ -52,8 +64,10 @@ public class UnitController : MonoBehaviour
         ResetTurn();
     }
 
-    // --- NEW: ACTION & STANCE LOGIC ---
-
+    
+    /// /////////////////////////////////////////
+    //  ACTION & STANCE LOGIC
+    /// /////////////////////////////////////////
     public void RegisterAction()
     {
         ActionsTakenThisTurn++;
@@ -62,7 +76,7 @@ public class UnitController : MonoBehaviour
 
     private void UpdateStance()
     {
-        // If we are already Downed, we stay Downed until healed/reset
+        // If already Downed, stay Downed until healed/reset.
         if (CurrentStance == UnitStance.Downed) return;
 
         switch (ActionsTakenThisTurn)
@@ -70,7 +84,7 @@ public class UnitController : MonoBehaviour
             case 0: CurrentStance = UnitStance.Defending; break;
             case 1: CurrentStance = UnitStance.Acted; break;
             case 2: CurrentStance = UnitStance.Overextended; break;
-            default: CurrentStance = UnitStance.Exposed; break; // 3 or more actions
+            default: CurrentStance = UnitStance.EXPOSED; break; // 3 or more actions...
         }
         
         OnStanceChanged?.Invoke(CurrentStance);
@@ -90,26 +104,30 @@ public class UnitController : MonoBehaviour
         Debug.Log($"<color=orange>{Stats.unitName} is DOWNED! They lose their next turn.</color>");
     }
 
-    // --- NEW: ENGAGEMENT LOGIC ---
+    /// /////////////////////////////////////////
+    //  ENGAGEMENT LOGIC
+    /// /////////////////////////////////////////
 
     public void Engage(UnitController target)
     {
         if (!EngagedUnits.Contains(target))
         {
             EngagedUnits.Add(target);
-            OnEngagementChanged?.Invoke(); // NEW: Tell UI we engaged!
+            OnEngagementChanged?.Invoke(); //Tell UI we engaged!
         }
 
         if (!target.EngagedUnits.Contains(this))
         {
             target.EngagedUnits.Add(this);
-            target.OnEngagementChanged?.Invoke(); // NEW: Tell target's UI they were engaged!
+            target.OnEngagementChanged?.Invoke(); // Tell target's UI they were engaged!
         }
     }
 
-    // --- UPDATED: DAMAGE MATH ENGINE ---
+    /// /////////////////////////////////////////
+    //  DAMAGE MATH ENGINE
+    /// /////////////////////////////////////////
 
-    // We now pass the attacker so we can check for flanking!
+    // Pass the attacker to check for flanking.
     public bool TakeDamage(int baseAmount, UnitController attacker, bool isPowerAttack = false)
     {
         if (IsDead) return true;
@@ -121,10 +139,11 @@ public class UnitController : MonoBehaviour
             if (UnityEngine.Random.value <= dodgeChance)
             {
                 Debug.Log($"<color=cyan>{Stats.unitName} DODGED the attack!</color>");
-                return false; // Survived, took 0 damage
+                return false; // Survived! Took 0 damage.
             }
         }
 
+        
         // 2. STANCE MULTIPLIERS
         float damageMultiplier = 1f;
         switch (CurrentStance)
@@ -132,31 +151,31 @@ public class UnitController : MonoBehaviour
             case UnitStance.Defending: damageMultiplier = 0.5f; break; // -50% Damage
             case UnitStance.Acted: damageMultiplier = 1f; break;
             case UnitStance.Overextended: damageMultiplier = 1f; break;
-            case UnitStance.Exposed: damageMultiplier = 3f; break; // +200% = 300% total
+            case UnitStance.EXPOSED: damageMultiplier = 3f; break; // +200% = 300% total
             case UnitStance.Downed: damageMultiplier = 3f; break;
         }
 
-        // 3. FLANKING CALCULATION
+        // 3. FLANKING CALCULATION.
         if (attacker != null && EngagedUnits.Count > 0 && !EngagedUnits.Contains(attacker))
         {
             Debug.Log($"<color=purple>{attacker.Stats.unitName} is FLANKING {Stats.unitName}!</color>");
             damageMultiplier += 0.5f; // Add +50% flanking bonus
         }
 
-        // 4. POWER ATTACK EXPLOIT CALCULATION
-        if (isPowerAttack && CurrentStance == UnitStance.Exposed)
+        // 4. POWER ATTACK EXPLOIT CALCULATION.
+        if (isPowerAttack && CurrentStance == UnitStance.EXPOSED)
         {
-            // 90% chance to be Downed
+            // 90% chance to be Downed.
             if (UnityEngine.Random.value <= 0.90f)
             {
                 SetDownedState();
             }
         }
 
-        // Calculate Final Damage
+        // Calculate Final Damage.
         int finalDamage = Mathf.RoundToInt(baseAmount * damageMultiplier);
 
-        // Apply Damage (Keeping your original health & event logic)
+        // Apply Damage.
         CurrentHealth -= finalDamage;
         Debug.Log($"<color=red>{Stats.unitName}</color> took {finalDamage} damage (Base: {baseAmount}). Remaining: {CurrentHealth}");
 
@@ -180,29 +199,31 @@ public class UnitController : MonoBehaviour
         return false; 
     }
 
-    // --- NEW: SELF-CONTAINED ACTION ---
+    /// /////////////////////////////////////////
+    //  ACTIONS.
+    /// /////////////////////////////////////////
 
     public IEnumerator PerformAttack(UnitController target, bool isPowerAttack = false)
     {
-        // 1. Register the action (Increases Exposedness)
+        // 1. Register the action (Increases Exposedness).
         RegisterAction();
 
-        // 2. Engage the target
+        // 2. Engage the target.
         Engage(target);
 
-        // 3. Play Visuals
+        // 3. Play Visuals.
         yield return StartCoroutine(Visuals.PlayAttackAnimation(target.transform.position));
 
-        // 4. Apply Damage
+        // 4. Apply Damage.
         int damageToDeal = isPowerAttack ? Stats.baseDamage * 2 : Stats.baseDamage;
         bool targetDied = target.TakeDamage(damageToDeal, this, isPowerAttack);
 
-        // 5. Handle Target Visuals
+        // 5. Handle Target Visuals.
         if (targetDied)
         {
             yield return StartCoroutine(target.Visuals.PlayDeathAnimation(target.Stats.deadVisual));
             target.gameObject.SetActive(false);
-            OnDeath?.Invoke(target); // Notify the manager that someone died
+            OnDeath?.Invoke(target); // Notify the manager that someone died.
         }
         else
         {
@@ -224,7 +245,7 @@ public class UnitController : MonoBehaviour
     private void Die()
     {
         Debug.Log($"{Stats.unitName} has died.");
-        // Notify any listeners (like CombatManager) that this unit is dead
+        // Notify any listeners (like CombatManager) that this unit is dead.
         OnDeath?.Invoke(this);
     }
 }
