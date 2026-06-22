@@ -4,18 +4,19 @@ using UnityEditor;
 /////////////////////////////////////////////////////////////////////////////////
 /// /////////////////////////////////////////////////////////////////////////////
 // MyceNox (2026) is my personal RPG-project with turn based combat which I have revised (read broken) more times that I want to even think of.
-// The project has been on hold for a while due to panic with everything else that needs doing. I'm returning to it if Keinonen does not descend.
+// The project has been on hold for a long while due to panic with everything else that needs doing. I'm returning to it if Keinonen does not descend.
 // 
-// I thought it would be useful to see my units in the editor and manage their stats in game.
+// I thought it would be useful to see my units in the editor window and manage their stats in game.
 // This way when the project expands I could test the flow of the battle more easily.
-// The inner workings of this tool are pretty basic. It doesn't really "kill" any units in-game that are set to 0 HP, for example and is more like in a "concept"-state.
+// The inner workings of this Window-tool are pretty basic. It doesn't really "kill" any units in-game that are set to 0 HP, for example and is more like in a "concept"-state.
 //
-// I am addind my old, related UnitController-script to the assingment returns but I have also tried to comment the connected logics extensively here. 
+// It was not mandatory in the assignment, but I'm addind my old, related UnitController-script to the assingment returns in case it proves helpful. 
+// Looking at it might not be stictly necessary since I have tried to comment the connected logics extensively here. 
 /////////////////////////////////////////////////////////////////////////////////
 /// /////////////////////////////////////////////////////////////////////////////
 
 // Tools must be placed in a "Editor"-folder for them to work properly.
-public class BattleDebuggerWindow : EditorWindow
+public class BattleDebugger_EditorWindow : EditorWindow
 {
     private UnitController[] activeUnits;
     private Vector2 scrollPos;
@@ -26,7 +27,7 @@ public class BattleDebuggerWindow : EditorWindow
     [MenuItem("MyceNox/Battle Debugger")] // The next method in the code is automatically wired to the button.
     public static void KeinonenDescents() // Method needs to be static because the Window might not exists in memory yet. 
     {
-        GetWindow<BattleDebuggerWindow>("Battle Debugger"); // If no open window exists one is created. If it does, is brought to the front.
+        GetWindow<BattleDebugger_EditorWindow>("Battle Debugger"); // If no open window exists one is created. If it does, is brought to the front.
                                                             // According to Gemini Unity automatically draws the window to the center of the screen if this is the first time it is activated.
     }
 
@@ -100,7 +101,7 @@ public class BattleDebuggerWindow : EditorWindow
 
                 // The "null" is the designated attacker but there is no need for any in the editors case. 
                 // (I'm thinking of building a "flanking"-logic to the game where the attacker "locks" with the target and if some other unit attacks the locked unit is penalized for more damage. 
-                // As of now there exists only one player and enemy (Goblin) unit in the game so it's a work in progress.)
+                // As of now there exists only one player and enemy (Goblin) unit in the game so it's a work in progress. (It's lacking spawning point logics for enemies more than one.))
 
                 //The "false" on the other hand is used in the case of a "power attack" which there is no reason for the tool to be. 
                 // (I am building a "Stance system" that lets the player attack several times in a turn, but each time he's "state" gets more "exposed" from: Defending-->Acted-->Overextended-->EXPOSED.
@@ -113,9 +114,10 @@ public class BattleDebuggerWindow : EditorWindow
                 EditorGUILayout.BeginHorizontal();
                 GUILayout.Label("Stance: " + unit.CurrentStance, GUILayout.Width(120)); 
                 
-                if (GUILayout.Button("Force Action (+EXPOSED)"))
+                if (GUILayout.Button("Consume 25 Speed"))
                 {
-                    unit.RegisterAction(); // Pushes a Unit a step towards EXPOSED.
+                    // Subtracts 25 Speed and automatically triggers UpdateStance()
+                    unit.ConsumeSpeed(25); 
                 }
                 if (GUILayout.Button("Reset Turn"))
                 {

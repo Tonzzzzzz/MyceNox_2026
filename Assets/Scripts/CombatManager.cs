@@ -23,18 +23,10 @@ public class CombatManager : MonoBehaviour
         else Instance = this;
     }
 
-    public void StartCombat()
+    public void StartCombat(UnitController player, List<UnitController> enemies)
     {
-        UnitController[] allUnits = FindObjectsByType<UnitController>(FindObjectsSortMode.None);
-        
-        enemyUnits.Clear();
-        foreach(var unit in allUnits)
-        {
-            if (unit.name.Contains("Player")) 
-                playerUnit = unit;
-            else 
-                enemyUnits.Add(unit);
-        }
+        playerUnit = player;
+        enemyUnits = enemies;
 
         State = CombatState.Setup;
         StartCoroutine(BeginBattleRoutine());
@@ -43,7 +35,8 @@ public class CombatManager : MonoBehaviour
     private IEnumerator BeginBattleRoutine()
     {
         yield return new WaitForSeconds(0.5f);
-        StartPlayerTurn();
+        State = CombatState.PlayerTurn;
+        Debug.Log("Combat Started! Player's Turn. Draw your cards!");
     }
 
     private void StartPlayerTurn()
@@ -153,5 +146,96 @@ public class CombatManager : MonoBehaviour
     {
         State = playerWon ? CombatState.Victory : CombatState.Defeat;
         Debug.Log(playerWon ? "VICTORY!" : "DEFEAT...");
+    }
+
+    /// ////////////////////////////////////////////////////////////
+    // --- CARD PLAY LOGIC ---
+    /// ////////////////////////////////////////////////////////////
+    
+    public bool TryPlayCard(CardSO playedCard)
+    {
+        // 1. Safety Checks
+        if (State != CombatState.PlayerTurn || isActing) 
+        {
+            Debug.LogWarning("Cannot play card: Not your turn or an animation is playing.");
+            return false;
+        }
+
+        // 2. Resource Check (Do we have enough Speed?)
+        if (playerUnit.CurrentSpeed < playedCard.speedCost)
+        {
+            return false; // Return false so the PlayZone snaps the card back
+        }
+
+        // 3. Target Selection (For now, auto-target the first alive enemy)
+        UnitController target = enemyUnits.FirstOrDefault(e => !e.IsDead);
+        if (target == null) return false;
+
+        // 4. Execute the Card!
+        StartCoroutine(ExecuteCardRoutine(playedCard, target));
+        
+        return true; // The card was successfully played
+    }
+
+    private IEnumerator ExecuteCardRoutine(CardSO card, UnitController target)
+    {
+        
+        isActing = true;
+
+        // A. Consume the Speed (This automatically updates the Stance via UnitController!)
+        playerUnit.ConsumeSpeed(card.speedCost);
+
+        // B. Engage the target (Flanking logic)
+        playerUnit.Engage(target);
+
+        // C. Visuals: Lunge forward
+        yield return StartCoroutine(playerUnit.Visuals.PlayAttackAnimation(target.transform.position));
+
+        // D. Apply Damage from the Card Data
+        // Notice we are passing the baseDamage from the card, plus the Player's baseStrength!
+        int totalDamage = card.baseDamage + playerUnit.Stats.baseStrength;
+        
+        bool targetDied = false;
+
+        CombatLogger.Instance.Log($"{playerUnit.Stats.unitName} used <b>{card.cardName}</b> for {card.speedCost} Speed.");
+
+        if (card.damageType == DamageType.Subduing)
+        {
+            targetDied = target.TakeStaminaDamage(totalDamage, card.piercesArmor);
+        }
+
+        // Check if it's a Subduing (Stamina) attack or a Lethal (Health) attack
+        if (card.damageType == DamageType.Subduing)
+        {
+            targetDied = target.TakeStaminaDamage(totalDamage, card.piercesArmor);
+        }
+        else
+        {
+            targetDied = target.TakeDamage(totalDamage, playerUnit);
+        }
+
+        // E. Handle Target Visuals
+        if (targetDied)
+        {
+            // If subduing, maybe use a different faint visual later, but this works for now
+            yield return StartCoroutine(target.Visuals.PlayDeathAnimation(target.Stats.deadVisual));
+            target.gameObject.SetActive(false);
+            enemyUnits.Remove(target);
+        }
+        else
+        {
+            yield return StartCoroutine(target.Visuals.PlayHitAnimation());
+        }
+
+        // F. Check Win Condition
+        if (CheckWinCondition())
+        {
+            EndBattle(true);
+        }
+
+        isActing = false;
+
+        
+        
     }
 }

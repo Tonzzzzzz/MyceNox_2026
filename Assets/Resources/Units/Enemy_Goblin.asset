@@ -13,9 +13,11 @@ MonoBehaviour:
   m_Name: Enemy_Goblin
   m_EditorClassIdentifier: Assembly-CSharp::UnitStatsSO
   unitName: Goblin
-  maxHealth: 8
-  baseDamage: 2
-  speed: 2
+  maxHealth: 200
+  baseStrength: 1
+  maxSpeedPool: 100
+  maxStamina: 10
+  maxArmor: 10
   visual: {fileID: 21300000, guid: f47945c62ef51224c93e5172ef9e2d87, type: 3}
   hurtVisual: {fileID: 21300000, guid: cc799f78200fd374c880b7bc4e99ce49, type: 3}
   deadVisual: {fileID: 21300000, guid: 65a4d87e00b260246b42c7fe8c75fae6, type: 3}
