@@ -336,11 +336,11 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 2009755833599045368}
   - {fileID: 2835324095983819759}
   - {fileID: 1117482582403724898}
   - {fileID: 5436226253695216071}
   - {fileID: 1844051817581628461}
+  - {fileID: 2009755833599045368}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -425,6 +425,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CardDisplay
   cardData: {fileID: 0}
+  cardBackImage: {fileID: 847848839164658350}
   nameText: {fileID: 6642338978904016602}
   descriptionText: {fileID: 3050130512063012937}
   speedCostText: {fileID: 6893883110196202954}

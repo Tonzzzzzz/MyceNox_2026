@@ -11,7 +11,11 @@ public class CombatManager : MonoBehaviour
 
     [Header("Runtime Data")]
     public CombatState State; 
+    
     private UnitController playerUnit;
+    // ADD THIS EXACT LINE RIGHT HERE:
+    public UnitController PlayerUnit => playerUnit; 
+    
     private List<UnitController> enemyUnits = new List<UnitController>();
 
     // NEW: Prevents the player from spam-clicking buttons while an animation is playing
@@ -34,16 +38,22 @@ public class CombatManager : MonoBehaviour
 
     private IEnumerator BeginBattleRoutine()
     {
+        // Give the scene half a second to settle
         yield return new WaitForSeconds(0.5f);
-        State = CombatState.PlayerTurn;
+        
+        // Properly trigger the start of the turn instead of just changing the state!
+        StartPlayerTurn();
         Debug.Log("Combat Started! Player's Turn. Draw your cards!");
     }
 
     private void StartPlayerTurn()
     {
         State = CombatState.PlayerTurn;
-        // Reset the player's Stance back to "Defending" at the start of their turn
         playerUnit.ResetTurn(); 
+
+        // NEW: Check if the deck needs to flow and shuffle at the start of the turn
+        DeckManager.Instance.CheckForReshuffle();
+
         Debug.Log("Combat Started! Player's Turn.");
     }
 
@@ -103,6 +113,10 @@ public class CombatManager : MonoBehaviour
 
         Debug.Log("Player ended their turn.");
         State = CombatState.EnemyTurn;
+        
+        // --- NEW: SWEEP THE HAND ---
+        DeckManager.Instance.DiscardHand();
+
         StartCoroutine(EnemyTurnRoutine());
     }
 

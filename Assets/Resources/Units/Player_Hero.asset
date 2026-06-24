@@ -18,6 +18,9 @@ MonoBehaviour:
   maxSpeedPool: 100
   maxStamina: 10
   maxArmor: 10
+  maxDrawPoints: 100
+  equippedGear:
+  - {fileID: 11400000, guid: 97e792b12a6a7fc41a133ccdc7614b88, type: 2}
   visual: {fileID: 21300000, guid: 03cffa00d2ff2fd4186f3f69ce48f803, type: 3}
   hurtVisual: {fileID: 0}
   deadVisual: {fileID: 0}

@@ -32,6 +32,9 @@ public class LevelManager : MonoBehaviour
         GameObject playerObj = Instantiate(unitBasePrefab, playerSpawnPoint.position, Quaternion.identity);
         UnitController playerController = playerObj.GetComponent<UnitController>();
         playerController.Initialize(playerData); 
+        
+        // DeckManager-logic
+        DeckManager.Instance.BuildPlayerDeck(playerData);
 
         // 3. Spawn Enemies
         List<UnitController> spawnedEnemies = new List<UnitController>();

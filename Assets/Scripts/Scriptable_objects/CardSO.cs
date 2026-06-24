@@ -26,6 +26,8 @@ public enum CardType
     Trap
 }
 
+
+
 [CreateAssetMenu(fileName = "NewCard", menuName = "MyceNox/Card")]
 public class CardSO : ScriptableObject
 {
@@ -42,6 +44,10 @@ public class CardSO : ScriptableObject
     public DamageType damageType;
     public int baseDamage;
     public bool piercesArmor; // Useful for Acid or specific piercing attacks
+
+    [Header("End of Turn Settings")]
+    [Tooltip("If true, this card is not discarded at the end of the player's turn.")]
+    public bool retainInHand = false;
 
     [Header("Resolution & Effects")]
     public CardDestination destinationAfterPlay = CardDestination.Discard;

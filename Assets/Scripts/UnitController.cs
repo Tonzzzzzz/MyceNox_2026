@@ -33,6 +33,7 @@ public class UnitController : MonoBehaviour
     /// /////////////////////////////////////////
     public UnitStance CurrentStance { get; private set; } = UnitStance.Defending;
     public int CurrentSpeed { get; private set; } = 0;
+    public int CurrentDrawPoints { get; private set; } = 0;
     public List<UnitController> EngagedUnits { get; private set; } = new List<UnitController>();
 
     [Header("Temporary Gear Setup")]
@@ -108,14 +109,18 @@ public class UnitController : MonoBehaviour
     // NEW: Calculates Effective Weight and Starting Speed
     public void ResetTurn()
     {
-        // 1. Calculate Effective Weight (Cannot drop below 0)
         int effectiveWeight = Mathf.Max(0, EquippedGearWeight - Stats.baseStrength);
-
-        // 2. Set Turn Start Speed
         CurrentSpeed = Stats.maxSpeedPool - effectiveWeight;
+        
+        // NEW: Replenish draw points at the start of the turn!
+        CurrentDrawPoints = Stats.maxDrawPoints; 
 
-        // 3. Immediately evaluate stance based on starting speed
         UpdateStance();
+    }
+
+    public void ConsumeDrawPoints(int amount)
+    {
+        CurrentDrawPoints -= amount;
     }
 
     public void SetDownedState()

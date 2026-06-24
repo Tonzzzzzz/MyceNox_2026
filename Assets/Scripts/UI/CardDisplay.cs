@@ -7,6 +7,9 @@ public class CardDisplay : MonoBehaviour
     [Header("Data Source")]
     public CardSO cardData; // The ScriptableObject holding the DNA
 
+    [Header("Reference to the card-prefab draw image")]
+    public GameObject cardBackImage;
+
     [Header("UI References")]
     [SerializeField] private TMP_Text nameText;
     [SerializeField] private TMP_Text descriptionText;
@@ -63,6 +66,15 @@ public class CardDisplay : MonoBehaviour
         {
             group.alpha = IsPlayable ? 1f : 0.5f;
             group.interactable = IsPlayable; // Prevents dragging if too expensive
+        }
+    }
+    // NEW: Toggles the back of the card on or off
+    public void SetFaceUp(bool isFaceUp)
+    {
+        if (cardBackImage != null)
+        {
+            // If it is NOT face up, the card back is Active (covering the front)
+            cardBackImage.SetActive(!isFaceUp);
         }
     }
 }
