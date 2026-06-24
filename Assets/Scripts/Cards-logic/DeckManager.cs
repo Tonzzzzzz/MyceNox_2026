@@ -76,20 +76,11 @@ public class DeckManager : MonoBehaviour
     {
         for (int i = 0; i < amount; i++)
         {
+            // 1. If the deck is empty, we simply stop drawing. No automatic reshuffles!
             if (drawPile.Count == 0)
             {
-                if (discardPile.Count > 0)
-                {
-                    CombatLogger.Instance?.Log("Reshuffling discard pile...");
-                    drawPile.AddRange(discardPile);
-                    discardPile.Clear();
-                    ShuffleDeck();
-                }
-                else
-                {
-                    CombatLogger.Instance?.Log("<color=red>No cards left in deck!</color>");
-                    break;
-                }
+                CombatLogger.Instance?.Log("<color=red>No cards left in draw pile!</color>");
+                break;
             }
 
             CardSO drawnCardData = drawPile[0];
@@ -97,7 +88,6 @@ public class DeckManager : MonoBehaviour
 
             GameObject newCard = Instantiate(cardPrefab, playerHandTransform);
             
-            // NEW: Force the Horizontal Layout Group to assign coordinates immediately!
             LayoutRebuilder.ForceRebuildLayoutImmediate(playerHandTransform.GetComponent<RectTransform>());
 
             CardDisplay display = newCard.GetComponent<CardDisplay>();
@@ -111,7 +101,6 @@ public class DeckManager : MonoBehaviour
         }
 
         UpdatePileUI();
-        CheckForReshuffle(); // Automatically trigger animation if we just drew the very last card!
     }
 
     public void DiscardCard(DraggableCard cardUI, float delayBeforeDiscard = 1f)
@@ -122,7 +111,8 @@ public class DeckManager : MonoBehaviour
             discardPile.Add(display.cardData);
         }
 
-        StartCoroutine(AnimateToDiscardRoutine(cardUI.transform, delayBeforeDiscard));
+        // Pass the explicit position so it cannot snap
+        StartCoroutine(AnimateToDiscardRoutine(cardUI.transform, cardUI.transform.position, cardUI.transform.localScale, delayBeforeDiscard));
     }
 
     // Consolidated UI updates into one method
@@ -186,15 +176,15 @@ public class DeckManager : MonoBehaviour
         }
     }
 
-    private IEnumerator AnimateToDiscardRoutine(Transform cardTransform, float delay)
+    // Notice the new Vector3 parameters in the signature!
+    private IEnumerator AnimateToDiscardRoutine(Transform cardTransform, Vector3 startPos, Vector3 startScale, float delay)
     {
         if (cardTransform == null) yield break;
 
-        // NEW: Capture the starting position IMMEDIATELY, before the delay!
-        Vector3 startPos = cardTransform.position;
-        Vector3 startScale = cardTransform.localScale;
+        // Force the card to stay locked in its starting position during the wait time
+        cardTransform.position = startPos;
+        cardTransform.localScale = startScale;
 
-        // Now we wait for our turn in the "flow" sequence
         yield return new WaitForSeconds(delay);
 
         if (cardTransform == null) yield break;
@@ -217,7 +207,7 @@ public class DeckManager : MonoBehaviour
             yield return null;
         }
         
-        UpdatePileUI();
+        UpdatePileUI(); 
         Destroy(cardTransform.gameObject);
     }
 
@@ -340,28 +330,33 @@ public class DeckManager : MonoBehaviour
             if (cardUI != null)
             {
                 CardDisplay display = cardUI.GetComponent<CardDisplay>();
-                if (display != null && display.cardData != null)
+                
+                if (display != null && display.cardData != null && !display.cardData.retainInHand)
                 {
-                    if (!display.cardData.retainInHand)
-                    {
-                        // 1. Capture the exact world position BEFORE unparenting
-                        Vector3 worldPos = cardUI.transform.position;
-                        
-                        // 2. Unparent so it leaves the layout group (true keeps world space)
-                        cardUI.transform.SetParent(transform.root, true);
-                        
-                        // 3. Force it to stay exactly where it was!
-                        cardUI.transform.position = worldPos;
-                        
-                        // 4. Turn off raycasts so you can't accidentally grab it while it flows away
-                        CanvasGroup cg = cardUI.GetComponent<CanvasGroup>();
-                        if (cg != null) cg.blocksRaycasts = false;
+                    discardPile.Add(display.cardData);
+                    
+                    // 1. THE BULLETPROOF UI TRICK: Tell the layout group to ignore this card instantly!
+                    LayoutElement layoutElement = cardUI.gameObject.GetComponent<LayoutElement>();
+                    if (layoutElement == null) layoutElement = cardUI.gameObject.AddComponent<LayoutElement>();
+                    layoutElement.ignoreLayout = true;
+                    
+                    // 2. Strip drag logic so the player can't grab it while it's flying
+                    Destroy(cardUI); 
+                    CanvasGroup cg = display.GetComponent<CanvasGroup>();
+                    if (cg != null) cg.blocksRaycasts = false;
 
-                        DiscardCard(cardUI, staggerDelay);
-                        staggerDelay += 0.1f; 
-                    }
+                    // 3. Animate the REAL card to the discard pile (it is no longer confined by the layout!)
+                    StartCoroutine(AnimateToDiscardRoutine(display.transform, display.transform.position, display.transform.localScale, staggerDelay));
+                    
+                    staggerDelay += 0.1f; 
                 }
             }
+        }
+        
+        // Force the layout group to instantly collapse the gaps left by the ignored cards
+        if (playerHandTransform != null)
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(playerHandTransform.GetComponent<RectTransform>());
         }
     }
 }

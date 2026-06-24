@@ -14,6 +14,10 @@ public class UnitStatsSO : ScriptableObject
     public int maxStamina; // Used in fights if a player wants to capture an enemy alive. If stamina is reduced to 0 the enemy faints. Player cannot be captured, so this stat is enemy only.
     public int maxArmor; // Used in fights if a player wants to capture an enemy alive. Any stamina damage is reduced from armor first if enemy has any, unless a card states otherwise.
     public int maxDrawPoints;
+    
+    [Header("Abilities")]
+    [Tooltip("If true, this unit can reshuffle their discard pile mid-turn when clicking an empty draw deck.")]
+    public bool canReshuffleMidTurn = false;
 
     // Player equipment
 

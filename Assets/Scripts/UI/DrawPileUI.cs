@@ -11,20 +11,29 @@ public class DrawPileUI : MonoBehaviour, IPointerClickHandler
         {
             UnitController player = CombatManager.Instance.PlayerUnit;
 
-            // NEW: If an animation is playing, or the draw pile is empty but discards exist, FORCE the swap instantly!
-            if (DeckManager.Instance.IsReshuffling || (DeckManager.Instance.GetDrawPileCount() == 0 && DeckManager.Instance.GetDiscardPileCount() > 0))
+            // 1. If an animation is physically playing, interrupt and finish it.
+            if (DeckManager.Instance.IsReshuffling)
             {
                 DeckManager.Instance.CompleteReshuffleInstantly();
             }
 
-            // If it is STILL 0, it means the player has completely exhausted both piles!
+            // 2. If the deck is empty...
             if (DeckManager.Instance.GetDrawPileCount() == 0)
             {
-                CombatLogger.Instance?.Log("<color=red>No cards left in deck or discard!</color>");
+                // NEW: Check if the player has the "Draw Haste" ability!
+                if (player != null && player.Stats.canReshuffleMidTurn && DeckManager.Instance.GetDiscardPileCount() > 0)
+                {
+                    CombatLogger.Instance?.Log("<color=magenta>Draw Haste Activated!</color>");
+                    DeckManager.Instance.CheckForReshuffle();
+                }
+                else
+                {
+                    CombatLogger.Instance?.Log("<color=red>No cards left in draw pile!</color>");
+                }
                 return;
             }
 
-            // Standard Draw Logic
+            // 3. Standard Draw Logic
             if (player != null && player.CurrentDrawPoints > 0)
             {
                 player.ConsumeDrawPoints(1); 
